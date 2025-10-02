@@ -1,0 +1,31 @@
+{
+  "name": "pdf-scanner-app",
+  "version": "1.0.0",
+  "description": "A simple application to scan and render data from PDF files, including text and images.",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.5.4",
+    "@types/node": "^16.11.7",
+    "@types/express": "^4.17.13"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/pdf-scanner-app.git"
+  },
+  "keywords": [
+    "pdf",
+    "scanner",
+    "renderer",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
