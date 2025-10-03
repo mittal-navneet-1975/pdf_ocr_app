@@ -1,0 +1,22 @@
+moisture | 0-1
+acid_value | <=30
+PI | 8-14
+acetone	| >=60
+peanut | Absent
+PC | 12-18
+PE | 8-16
+peroxide | <=5
+viscosity | <=12000
+L-outside | >=23
+gardner | 0-11
+hexane | <=0.3
+toluene | <=0.3
+plate_count	| <1000
+yeast_and_mould | <60
+yeast | <30
+Mould | <30
+enterobacteriaceae | <10
+coliforms | <10
+coliforms | <3
+e_coli | "Not Detected" OR "Absent" OR "<3"
+salmonella | "Not Detected" OR "Absent" per 375 g"

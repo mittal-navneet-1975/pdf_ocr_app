@@ -1,0 +1,15 @@
+moisture | 0-5
+ph | 5-6.5
+ash | 0-12
+fat	| 0-1
+lactose | 76-86
+protein | 0-7
+plate_count	| <10000
+yeast | <50
+Mould | <50
+yeast_and_mould | <50
+enterobacteriaceae | <10
+salmonella | "Not Detected" OR "Absent" per 375 g"
+enterococci | <1000
+coagulase | <10
+listeria | "Not Detected" OR "Absent" per 125g

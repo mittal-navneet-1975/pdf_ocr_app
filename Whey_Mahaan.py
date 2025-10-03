@@ -3,47 +3,61 @@ import re
 import os
 import glob
 import sys
+import subprocess
+from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\Test\output"   # default JSON folder
-keys_file = r"C:\Test\keys.txt"  # file containing keys of interest
+json_dir = r"C:\Test\output"
+keys_file = r"C:\Test\keys.txt"
+specs_file = r"C:\Test\specs\WHEY.txt"
+
+compliance_keys = [
+    "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
+]
+
+param_aliases = {
+    "moisture": ["moisture"],
+    "total_plate_count": ["totalplatecount", "standardplatecount", "platecount"],
+    "enterobacteriaceae": ["enterobacteriaceae"],
+    "salmonella": ["salmonella"],
+    "yeast_and_mold": ["yeastandmould", "yeastmould"],
+    "colour_appearance": ["colourappearance", "appearance", "color"],
+    "taste_flavour": ["tasteflavour"],
+    "milk_solids": ["milksolids"],
+    "milk_fat": ["milkfat"],
+    "protein": ["protein"],
+    "ash": ["ash"],
+    "ph": ["ph"],
+    "bulk_density": ["bulkdensity"],
+    "scorched_particles": ["scorchedparticles"],
+    "titrable_acidity": ["titrableacidity"],
+    "coliform_count": ["coliformcount"],
+    "e_coli": ["ecoli"],
+    "shigella": ["shigella"],
+    "listeria_monocytogenes": ["listeriamonocytogenes"],
+    "staphylococcus_aureus": ["staphylococcusaureus"],
+    "b_cereus": ["bcereus"]
+}
 
 # === FIND JSON FILE ===
-if len(sys.argv) > 1:
-    json_file = sys.argv[1]
-else:
-    json_files = glob.glob(os.path.join(json_dir, "*.json"))
-    if not json_files:
-        raise FileNotFoundError(f"No JSON files found in {json_dir}")
-    json_file = json_files[0]
-
+json_file = sys.argv[1] if len(sys.argv) > 1 else glob.glob(os.path.join(json_dir, "*.json"))[0]
 print(f"Using JSON file: {json_file}")
 
 # === LOAD JSON ===
 with open(json_file, "r", encoding="utf-8") as f:
-    data = json.load(f)
-content = data.get("content", {})
+    content = json.load(f).get("content", {})
 
 # === DETECT PRODUCT & COMPANY ===
 product_name = (content.get("product_name") or content.get("product") or "").strip()
 company_name = content.get("company_name") or content.get("supplier") or content.get("manufacturing_vendor_site_name") or ""
+print(f"Product: {product_name} | Company: {company_name}")
 
-print("Detected product:", product_name)
-print("Detected company:", company_name)
-
-# === NORMALIZER ===
-def normalize_text(s):
-    if not s: return ""
-    s = str(s).lower()
-    s = re.sub(r"[^a-z0-9]", "", s)
-    return s
-
-# === LOAD KEYS FROM FILE USING DYNAMIC KEYWORDS ===
+# === LOAD KEYS ===
 raw_keys = []
-# Use dynamic keywords (from console output)
-dynamic_product = product_name.split()[0] if product_name else ""
+product_keywords = ["Whey", "Lecithin", "SMP", "Permeate", "Casein"]
+dynamic_product = next((kw for kw in product_keywords if kw.lower() in product_name.lower()), product_name.split()[0] if product_name else "")
 dynamic_company = company_name.split()[0] if company_name else ""
-product_company_key = f"{dynamic_product}_{dynamic_company}".lower()  # Whey_Mahaan -> whey_mahaan
+product_company_key = f"{dynamic_product}_{dynamic_company}".replace(" ", "_").replace("-", "_").lower()
 
 if os.path.exists(keys_file):
     with open(keys_file, "r", encoding="utf-8") as f:
@@ -51,167 +65,203 @@ if os.path.exists(keys_file):
             if "- Mandatory Values -" not in line:
                 continue
             product_part, keys_part = line.split("- Mandatory Values -", 1)
-            product_part_norm = product_part.strip().strip('"').lower()
+            product_part_norm = product_part.strip().strip('"').replace(" ", "_").replace("-", "_").lower()
             keys_match = re.search(r"\{(.*?)\}", keys_part)
             keys_list = [k.strip().strip('"').strip("'") for k in keys_match.group(1).split(",")] if keys_match else []
-
-            # Match dynamic Product_Company key first, else fallback to product only
             if product_part_norm == product_company_key:
                 raw_keys = keys_list
                 break
-            elif not raw_keys and product_part_norm == dynamic_product.lower():
-                raw_keys = keys_list
 
-print("Keys of Interest:", raw_keys)
+print(f"Keys: {raw_keys}")
 
-# === HELPER FUNCTIONS ===
-_num_re = re.compile(r"[-+]?\d*\.\d+|\d+")
+# === LOAD SPECS ===
+specs_dict = {}
+if os.path.exists(specs_file):
+    with open(specs_file, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip() and "|" in line:
+                parts = line.strip().split("|", 1)
+                if len(parts) == 2:
+                    specs_dict[re.sub(r"[^a-z0-9]", "", parts[0].lower())] = parts[1].strip()
+    print(f"Loaded {len(specs_dict)} specs")
 
-def parse_number(s):
-    if s is None: return None
-    s = str(s).replace(",", "").strip()
-    m = _num_re.search(s)
-    return float(m.group(0)) if m else None
+# === HELPERS ===
+def normalize(s):
+    return re.sub(r"[^a-z0-9]", "", str(s).lower()) if s else ""
 
-def parse_interval(value):
-    """Convert a value or spec string into numeric interval."""
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return {"min": float(value), "max": float(value)}
-    s = str(value).lower().strip()
-    s = s.replace("–", "-").replace("—", "-")
-    # Handle textual absent
-    if any(x in s for x in ["absent", "not detect", "nd", "negative"]):
+def parse_interval(value, is_spec=False):
+    if value is None: return None
+    s = str(value).lower().strip().replace("—", "-").replace("–", "-")
+
+    if any(x in s for x in ["absent", "not detect", "nd", "negative", "complies"]):
         return {"min": 0, "max": 0}
-    # Handle <, <=, >, >=
-    m = re.match(r'([<>]=?)\s*([\d,\.]+)', s)
+
+    m = re.match(r'^\s*([<>]=?)\s*([\d,]*\.?\d+)', s)
     if m:
-        comp, num_s = m.groups()
-        num = float(num_s.replace(",", ""))
-        if comp == "<":
-            return {"min": 0, "max": num - 1e-6}
-        if comp == "<=":
-            return {"min": 0, "max": num}
-        if comp == ">":
-            return {"min": num + 1e-6, "max": None}
-        if comp == ">=":
-            return {"min": num, "max": None}
-    # Handle ranges like 0-5
-    if "-" in s:
-        nums = _num_re.findall(s)
-        if len(nums) >= 2:
-            return {"min": float(nums[0]), "max": float(nums[1])}
-    # Handle max/min keyword
-    if "max" in s:
-        n = parse_number(s)
-        return {"min": 0, "max": n}
-    if "min" in s:
-        n = parse_number(s)
-        return {"min": n, "max": None}
-    # single number
-    n = parse_number(s)
-    if n is not None:
-        return {"min": n, "max": n}
+        comp, num = m.groups()
+        num = float(num.replace(",", ""))
+        return {"min": 0, "max": num} if comp in ("<", "<=") else {"min": num, "max": None}
+
+    if "max" in s or "min" in s:
+        n = re.search(r"[\d,]*\.?\d+", s.replace(",", ""))
+        if n:
+            num = float(n.group(0))
+            return {"min": 0, "max": num} if "max" in s else {"min": num, "max": None}
+
+    nums = re.findall(r"[\d,]*\.?\d+", s.replace(",", ""))
+    if len(nums) >= 2:
+        return {"min": float(nums[0]), "max": float(nums[1])}
+    if len(nums) == 1:
+        num = float(nums[0])
+        return {"min": 0, "max": num} if is_spec else {"min": num, "max": num}
+
     return None
 
-def check_within(result, spec, key=None):
-    """Check if result is within spec."""
-    # Treat textual compliance as Within Spec
-    if isinstance(result, str):
-        if result.strip().lower() in ["complies", "fine", "ok", "acceptable"]:
-            return True, "Within Spec"
-
-    # Handle textual parameters (appearance, color, taste, scorched)
-    if key and key.lower() in ["colour/ appearance", "taste / flavour", "scorched particles", "appearance", "color"]:
-        if result and spec:
-            r, s = str(result).strip().lower(), str(spec).strip().lower()
-            # If result explicitly mentions compliance or matches spec text
-            if r == s or r in s or s in r or r in ["complies", "fine", "ok", "acceptable"]:
+def check_compliance(result_int, spec_int, raw_result, raw_spec, key):
+    # Textual parameters
+    if key.lower() in ["colour_appearance", "taste_flavour", "scorched_particles", "appearance", "color", "taste", "flavour"]:
+        if raw_result and raw_spec:
+            r, s = str(raw_result).lower(), str(raw_spec).lower()
+            if r in s or s in r or any(w in s for w in r.split()) or r in ["complies", "fine", "ok", "acceptable"]:
                 return True, "Within Spec"
         return False, "Textual mismatch"
 
     # Numeric comparison
-    res_int = parse_interval(result)
-    spec_int = parse_interval(spec)
+    if not result_int or not spec_int:
+        return False, "Non-numeric or missing spec"
 
-    if not res_int or not spec_int:
-        return False, "Non-numeric result or missing spec"
+    r_max = result_int.get("max", 0)
+    s_max = spec_int.get("max")
+    s_min = spec_int.get("min")
 
-    if spec_int.get("min") is not None and res_int.get("min") < spec_int.get("min"):
-        return False, "Below lower bound"
-    if spec_int.get("max") is not None and res_int.get("max") > spec_int.get("max"):
+    if s_max == 0:
+        return (True, "Within Spec") if r_max == 0 else (False, "Exceeds Spec")
+    if s_max and round(r_max, 2) > round(s_max, 2):
         return False, "Exceeds upper bound"
+    if s_min and round(result_int.get("min", 0), 2) < round(s_min, 2):
+        return False, "Below lower bound"
+
     return True, "Within Spec"
 
+def check_or_specs(result_int, spec_value, raw_result, key):
+    if " OR " not in spec_value.upper():
+        spec_int = parse_interval(spec_value, is_spec=True)
+        return check_compliance(result_int, spec_int, raw_result, spec_value, key)
+    
+    for spec_part in re.split(r'\s+OR\s+', spec_value, flags=re.IGNORECASE):
+        spec_int = parse_interval(spec_part.strip(), is_spec=True)
+        is_ok, _ = check_compliance(result_int, spec_int, raw_result, spec_part.strip(), key)
+        if is_ok:
+            return True, f"Within Spec (matched: {spec_part.strip()})"
+    
+    return False, "Does not match any OR condition"
 
-def get_result_and_spec(key):
-    """
-    Retrieve result and spec from content for a given key.
-    Uses normalized text and partial matching for common lab names.
-    """
-    key_norm = normalize_text(key)
+def get_result(key):
+    key_norm = normalize(key)
+    aliases = [normalize(a) for a in param_aliases.get(key, [key])]
+    prefixes = ["physical", "chemical", "microbiological"]
+    
+    # Strategy 1: Try prefix_key_result pattern
+    for prefix in prefixes:
+        for alias in [key] + param_aliases.get(key, []):
+            result_key = f"{prefix}_{alias}_result"
+            result_key_norm = normalize(result_key)
+            
+            for k in content.keys():
+                if normalize(k) == result_key_norm:
+                    result = content[k]
+                    if result:
+                        print(f"  Found (prefix): {k} = {result}")
+                        return result
+    
+    # Strategy 2: Broader search - look for key in any JSON key ending with result
+    for k in content.keys():
+        k_norm = normalize(k)
+        if k_norm.endswith("result"):
+            for alias in [key_norm] + aliases:
+                if alias in k_norm:
+                    result = content[k]
+                    if result:
+                        print(f"  Found (contains): {k} = {result}")
+                        return result
+    
+    print(f"  NOT FOUND: {key}")
+    return None
 
-    # Mapping common variations
-    common_map = {
-        "colourappearance": ["colourappearance", "color", "appearance"],
-        "tasteflavour": ["tasteflavour", "taste", "flavour", "flavor"],
-        "scorchedparticles": ["scorchedparticles", "scorched"]
-    }
+def get_spec(key):
+    key_norm = normalize(key)
+    
+    if key_norm in specs_dict:
+        return specs_dict[key_norm]
+    
+    for alias in param_aliases.get(key, [key]):
+        alias_norm = normalize(alias)
+        if alias_norm in specs_dict:
+            return specs_dict[alias_norm]
+    
+    for spec_key in specs_dict:
+        if key_norm in spec_key or spec_key in key_norm:
+            return specs_dict[spec_key]
+    
+    return None
 
-    for base, value in content.items():
-        if base.startswith("characteristic_") and base.endswith("_name"):
-            name_norm = normalize_text(str(value).strip())
-
-            # Direct match
-            if name_norm == key_norm:
-                prefix = base.split("_")[1]
-                return content.get(f"characteristic_{prefix}_result"), content.get(f"characteristic_{prefix}_limit")
-
-            # Check in common_map
-            for std_key, variants in common_map.items():
-                if key_norm in variants and name_norm in variants:
-                    prefix = base.split("_")[1]
-                    return content.get(f"characteristic_{prefix}_result"), content.get(f"characteristic_{prefix}_limit")
-
-    return None, None
-
+def get_salmonella_sample():
+    patterns = ["15x25 g", "5x75 g", "3x125 g", "375 g", "15x25g", "5x75g", "3x125g", "375g"]
+    
+    for k, v in content.items():
+        if "salmonella" in k.lower():
+            val = str(v)
+            for pattern in patterns:
+                if pattern.lower() in val.lower():
+                    return pattern
+    return None
 
 # === HTML REPORT ===
-output_file = os.path.splitext(json_file)[0] + "_report.html"
+output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d')}_report.html"
 with open(output_file, "w", encoding="utf-8") as out:
-    out.write("<html><body>\n")
-    out.write(f"<h1>📊 Lab Report for {product_name} ({company_name})</h1>\n")
-    out.write(f"<p>Source JSON file: {os.path.basename(json_file)}</p>\n")
+    out.write(f"<html><body>\n<h1>Lab Report: {product_name} ({company_name})</h1>\n")
+    #out.write(f"<p>JSON: {os.path.basename(json_file)} | Specs: {os.path.basename(specs_file)}</p>\n")
     out.write("<table border='1' cellspacing='0' cellpadding='5'>\n")
     out.write("<tr><th>Parameter</th><th>Result</th><th>Spec</th><th>Status</th></tr>\n")
 
-    non_compliant_found = False
+    non_compliant = False
 
     for key in raw_keys:
-        raw_result, raw_spec = get_result_and_spec(key)
-        raw_result_str = str(raw_result) if raw_result is not None else ""
-        raw_spec_str = str(raw_spec) if raw_spec is not None else ""
+        raw_result = get_result(key)
+        raw_spec = get_spec(key)
 
-        within, reason = check_within(raw_result, raw_spec, key)
-        status = "Within Spec" if within else "Out of Spec"
-        color = "green" if within else "red"
+        sample = get_salmonella_sample() if "salmonella" in key.lower() else None
+        result_display = f"{raw_result} / {sample}" if sample and raw_result else (raw_result or "-")
+        spec_display = raw_spec or "-"
 
-        if not within:
-            non_compliant_found = True
+        result_int = parse_interval(raw_result, is_spec=False)
 
-        out.write(f"<tr>")
-        out.write(f"<td>{key}</td><td>{raw_result_str}</td><td>{raw_spec_str}</td>")
-        out.write(f"<td style='color:{color}'>{status}")
-        if not within:
-            out.write(f"<br><small>Reason: {reason}</small>")
+        if not raw_result or not raw_spec:
+            status, color, reason = "Missing", ("red" if key in compliance_keys else "gray"), "Missing result or spec"
+            is_ok = False
+        else:
+            is_ok, reason = check_or_specs(result_int, raw_spec, raw_result, key)
+            status, color = ("Within Spec", "green") if is_ok else ("Exceeds Spec", "red")
+
+        if key in compliance_keys and not is_ok:
+            non_compliant = True
+
+        out.write(f"<tr><td>{key}</td><td>{result_display}</td><td>{spec_display}</td>")
+        out.write(f"<td style='color:{color}{'; font-weight:bold' if key in compliance_keys else ''}'>{status}")
+        if not is_ok:
+            out.write(f"<br><small>{reason}</small>")
         out.write("</td></tr>\n")
 
     out.write("</table>\n")
-    if non_compliant_found:
-        out.write(f"<h3 style='color:red'>This report has Non-Compliance</h3>\n")
-    else:
-        out.write(f"<h3 style='color:green'>This report is ✅ Fully compliant</h3>\n")
+    status_msg = "Non-Compliance" if non_compliant else "Fully compliant"
+    status_color = "red" if non_compliant else "green"
+    out.write(f"<h3 style='color:{status_color}'>This report has {status_msg} (based on selected parameters)</h3>\n")
     out.write("</body></html>\n")
 
-print(f"Report written to: {output_file}")
+print(f"\nReport: {output_file}")
+# === RUN CLEANUP SCRIPT ===
+try:
+    subprocess.run(["python", "cleanup_files.py"], check=True)
+    print("cleanup_files.py executed successfully.")
+except Exception as e:
+    print(f"Error running cleanup_files.py: {e}")
