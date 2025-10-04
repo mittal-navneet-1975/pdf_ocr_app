@@ -15,8 +15,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-INPUT_DIR = r"C:\Users\vibho\Downloads\Engineering\Test\docs"
-OUTPUT_DIR = r"C:\Users\vibho\Downloads\Engineering\Test\output"
+INPUT_DIR = r"C:\pdf_OCR_app\pdf"
+OUTPUT_DIR = r"C:\pdf_OCR_app\output"
 
 @app.post("/upload-pdf/")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -32,11 +32,20 @@ async def upload_pdf(file: UploadFile = File(...)):
     except subprocess.CalledProcessError as e:
         return {"success": False, "error": str(e)}
 
-    # List output files
+    # List output files with their modification times
     output_files = [
         f for f in os.listdir(OUTPUT_DIR)
-        if f.lower().endswith(".json") or f.lower().endswith(".html")
+        if f.lower().endswith(".html")
     ]
+
+    if not output_files:
+        return {"success": False, "outputs": []}
+
+    # Sort by modification time (newest first)
+    output_files.sort(
+        key=lambda f: os.path.getmtime(os.path.join(OUTPUT_DIR, f)),
+        reverse=True
+    )
     return {"success": True, "outputs": output_files}
 
 @app.get("/output/{filename}")

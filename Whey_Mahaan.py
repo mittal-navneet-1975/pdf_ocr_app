@@ -7,9 +7,9 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\Test\output"
-keys_file = r"C:\Test\keys.txt"
-specs_file = r"C:\Test\specs\WHEY.txt"
+json_dir = r"C:\pdf_OCR_app\output"
+keys_file = r"C:\pdf_OCR_app\keys.txt"
+specs_file = r"C:\pdf_OCR_app\specs\WHEY.txt"
 
 compliance_keys = [
     "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
@@ -20,9 +20,11 @@ param_aliases = {
     "total_plate_count": ["totalplatecount", "standardplatecount", "platecount"],
     "enterobacteriaceae": ["enterobacteriaceae"],
     "salmonella": ["salmonella"],
-    "yeast_and_mold": ["yeastandmould", "yeastmould"],
-    "colour_appearance": ["colourappearance", "appearance", "color"],
+    "yeast_and_mold": ["yeastandmold", "yeastandmould", "yeastmould"],
+    "colour_appearance": ["colourappearance", "appearance"],
     "taste_flavour": ["tasteflavour"],
+    "color": ["color"],
+    "appearance": ["appearance"],
     "milk_solids": ["milksolids"],
     "milk_fat": ["milkfat"],
     "protein": ["protein"],
@@ -159,30 +161,49 @@ def check_or_specs(result_int, spec_value, raw_result, key):
 def get_result(key):
     key_norm = normalize(key)
     aliases = [normalize(a) for a in param_aliases.get(key, [key])]
-    prefixes = ["physical", "chemical", "microbiological"]
+    all_matches = [key_norm] + aliases
     
-    # Strategy 1: Try prefix_key_result pattern
+    # Strategy 1: Try characteristic_X_name pattern (Mahaan format)
+    for i in range(1, 25):
+        name_key = f"characteristic_{i}_name"
+        result_key = f"characteristic_{i}_result"
+        
+        param_val = content.get(name_key)
+        if not param_val:
+            continue
+        
+        param_norm = normalize(param_val)
+        
+        # Check if this matches our key or any alias
+        for match in all_matches:
+            if match == param_norm or match in param_norm or param_norm in match:
+                result = content.get(result_key)
+                if result:
+                    print(f"  Found (characteristic): {name_key}='{param_val}' -> {result}")
+                    return result
+    
+    # Strategy 2: Try prefix_key_result pattern (alternative format)
+    prefixes = ["physical", "chemical", "microbiological"]
     for prefix in prefixes:
-        for alias in [key] + param_aliases.get(key, []):
-            result_key = f"{prefix}_{alias}_result"
-            result_key_norm = normalize(result_key)
+        for match in all_matches:
+            result_key_pattern = f"{prefix}_{match}_result"
             
             for k in content.keys():
-                if normalize(k) == result_key_norm:
+                if normalize(k) == normalize(result_key_pattern):
                     result = content[k]
                     if result:
-                        print(f"  Found (prefix): {k} = {result}")
+                        print(f"  Found (prefix): {k} -> {result}")
                         return result
     
-    # Strategy 2: Broader search - look for key in any JSON key ending with result
+    # Strategy 3: Broader search
     for k in content.keys():
         k_norm = normalize(k)
         if k_norm.endswith("result"):
-            for alias in [key_norm] + aliases:
-                if alias in k_norm:
+            for match in all_matches:
+                if match in k_norm:
                     result = content[k]
                     if result:
-                        print(f"  Found (contains): {k} = {result}")
+                        print(f"  Found (contains): {k} -> {result}")
                         return result
     
     print(f"  NOT FOUND: {key}")
@@ -206,18 +227,47 @@ def get_spec(key):
     return None
 
 def get_salmonella_sample():
-    patterns = ["15x25 g", "5x75 g", "3x125 g", "375 g", "15x25g", "5x75g", "3x125g", "375g"]
+    patterns = ["15x25 g", "5x75 g", "3x125 g", "375 g", "15x25g", "5x75g", "3x125g", "375g", "30x25g", "30x25 g"]
     
+    # Check characteristic_X_uom and characteristic_X_name fields
+    for i in range(1, 25):
+        name_key = f"characteristic_{i}_name"
+        uom_key = f"characteristic_{i}_uom"
+        result_key = f"characteristic_{i}_result"
+        
+        name_val = str(content.get(name_key, ""))
+        if "salmonella" in name_val.lower():
+            # Check UOM field first
+            uom_val = str(content.get(uom_key, ""))
+            for pattern in patterns:
+                if pattern.lower() in uom_val.lower():
+                    return pattern
+            
+            # Check result field
+            result_val = str(content.get(result_key, ""))
+            for pattern in patterns:
+                if pattern.lower() in result_val.lower():
+                    return pattern
+    
+    # Fallback: check all content
     for k, v in content.items():
         if "salmonella" in k.lower():
             val = str(v)
             for pattern in patterns:
                 if pattern.lower() in val.lower():
                     return pattern
+    
     return None
 
 # === HTML REPORT ===
-output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d')}_report.html"
+# Make sure Whey_Mahaan folder exists inside output
+# report_dir = os.path.join(os.path.dirname(json_file), "Whey_Mahaan")
+# os.makedirs(report_dir, exist_ok=True)
+
+# # Create report filename (same base name as JSON, but with _report.html)
+# json_name = os.path.splitext(os.path.basename(json_file))[0]
+# output_file = os.path.join(report_dir, f"{json_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html")
+output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html"
 with open(output_file, "w", encoding="utf-8") as out:
     out.write(f"<html><body>\n<h1>Lab Report: {product_name} ({company_name})</h1>\n")
     #out.write(f"<p>JSON: {os.path.basename(json_file)} | Specs: {os.path.basename(specs_file)}</p>\n")

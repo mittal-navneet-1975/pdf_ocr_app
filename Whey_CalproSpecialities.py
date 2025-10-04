@@ -7,9 +7,9 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\Users\vibho\Downloads\Engineering\Test\output"
-keys_file = r"C:\Users\vibho\Downloads\Engineering\Test\keys.txt"
-specs_file = r"C:\Users\vibho\Downloads\Engineering\Test\WHEY.txt"
+json_dir = r"C:\pdf_OCR_app\output"
+keys_file = r"C:\pdf_OCR_app\keys.txt"
+specs_file = r"C:\pdf_OCR_app\specs\WHEY.txt"
 
 compliance_keys = [
     "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
@@ -249,7 +249,14 @@ def get_salmonella_sample():
     return None
 
 # === HTML REPORT ===
-output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d')}_report.html"
+# Make sure Whey_CalproSpecialities folder exists inside output
+# report_dir = os.path.join(os.path.dirname(json_file), "Whey_CalproSpecialities")
+# os.makedirs(report_dir, exist_ok=True)
+
+# # Create report filename (same base name as JSON, but with _report.html)
+# json_name = os.path.splitext(os.path.basename(json_file))[0]
+# output_file = os.path.join(report_dir, f"{json_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html")
+output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html"
 with open(output_file, "w", encoding="utf-8") as out:
     out.write(f"<html><body>\n<h1>Lab Report: {product_name} ({company_name})</h1>\n")
     #out.write(f"<p>JSON: {os.path.basename(json_file)} | Specs: {os.path.basename(specs_file)}</p>\n")

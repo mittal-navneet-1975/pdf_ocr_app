@@ -12,7 +12,7 @@ interface VendorSelectionProps {
 const mockVendors: Vendor[] = [
   { id: '1', name: 'CalproSpecialities Pvt. Ltd.', productIds: ['1'] },
   { id: '2', name: 'Mahaan Milk Food Limited', productIds: ['1'] },
-  { id: '3', name: 'Optilec', productIds: ['2'] },
+  { id: '3', name: 'Optilec - Kriti', productIds: ['2'] },
   { id: '4', name: 'ADM Agro Industries India Private Limited', productIds: ['2'] }
 ];
 

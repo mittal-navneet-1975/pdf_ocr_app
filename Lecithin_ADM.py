@@ -7,9 +7,9 @@ import sys
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\Users\vibho\Downloads\Engineering\Test\output"
-keys_file = r"C:\Users\vibho\Downloads\Engineering\Test\keys.txt"
-specs_file = r"C:\Users\vibho\Downloads\Engineering\Test\LECITHIN.txt"
+json_dir = r"C:\pdf_OCR_app\output"
+keys_file = r"C:\pdf_OCR_app\keys.txt"
+specs_file = r"C:\pdf_OCR_app\specs\LECITHIN.txt"
 
 compliance_keys = [
     "moisture", "acetone", "peanut", "peroxide", "gardner", "hexane", "toluene",
@@ -220,7 +220,14 @@ def get_salmonella_sample_size(key):
     return None
 
 # === HTML REPORT ===
-output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d')}_report.html"
+# Make sure Lecithin_ADM folder exists inside output
+# report_dir = os.path.join(os.path.dirname(json_file), "Lecithin_ADM")
+# os.makedirs(report_dir, exist_ok=True)
+
+# # Create report filename (same base name as JSON, but with _report.html)
+# json_name = os.path.splitext(os.path.basename(json_file))[0]
+# output_file = os.path.join(report_dir, f"{json_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html")
+output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html"
 with open(output_file, "w", encoding="utf-8") as out:
     out.write("<html><body>\n")
     out.write(f"<h1>Lab Report for {product_name} ({company_name})</h1>\n")

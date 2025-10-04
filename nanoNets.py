@@ -4,8 +4,8 @@ import json
 import subprocess
 
 # === CONFIG ===
-INPUT_DIR = r"C:\Users\vibho\Downloads\Engineering\Test\docs"
-OUTPUT_DIR = r"C:\Users\vibho\Downloads\Engineering\Test\output"
+INPUT_DIR = r"C:\pdf_OCR_app\pdf"
+OUTPUT_DIR = r"C:\pdf_OCR_app\output"
 API_KEY = "dcc5b694-96c8-11f0-b983-1ad2fa14c17a"
 URL = "https://extraction-api.nanonets.com/extract"
 HEADERS = {"Authorization": f"Bearer {API_KEY}"}
