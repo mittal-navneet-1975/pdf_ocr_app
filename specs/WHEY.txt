@@ -9,7 +9,7 @@ yeast | <50
 Mould | <50
 yeast_and_mould | <50
 enterobacteriaceae | <10
-salmonella | "Not Detected" OR "Absent" per 375 g"
+salmonella | "Not Detected" OR "Absent" / 375 g"
 enterococci | <1000
 coagulase | <10
 listeria | "Not Detected" OR "Absent" per 125g
