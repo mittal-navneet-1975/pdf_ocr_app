@@ -7,9 +7,9 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\pdf_OCR_app\output"
-keys_file = r"C:\pdf_OCR_app\keys.txt"
-specs_file = r"C:\pdf_OCR_app\specs\WHEY.txt"
+json_dir = r"C:\Test\output"
+keys_file = r"C:\Test\keys.txt"
+specs_file = r"C:\Test\specs\WHEY.txt"
 
 compliance_keys = [
     "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
@@ -86,20 +86,6 @@ if os.path.exists(specs_file):
                     specs_dict[re.sub(r"[^a-z0-9]", "", parts[0].lower())] = parts[1].strip()
     print(f"Loaded {len(specs_dict)} specs")
 
-# === DEBUG: Show what's in JSON ===
-print("\n=== DEBUG: All JSON fields ===")
-test_fields = [k for k in content.keys() if k.startswith('test_')]
-print(f"Found {len(test_fields)} test fields")
-for i in range(1, 6):
-    p_key = f"test_parameter_{i}"
-    r_key = f"observed_results_{i}"
-    s_key = f"specifications_{i}"
-    if p_key in content:
-        print(f"  {i}. param={content[p_key]}")
-        print(f"     result={content.get(r_key, 'N/A')}")
-        print(f"     spec={content.get(s_key, 'N/A')}")
-print("==============================\n")
-
 # === HELPERS ===
 def normalize(s):
     return re.sub(r"[^a-z0-9]", "", str(s).lower()) if s else ""
@@ -134,7 +120,7 @@ def parse_interval(value, is_spec=False):
 
 def check_compliance(result_int, spec_int, raw_result, raw_spec, key):
     # Textual parameters
-    if key in ["colour_appearance", "taste_flavour", "scorched_particles"]:
+    if key.lower() in ["colour_appearance", "taste_flavour", "scorched_particles", "colour/appearance", "taste/flavour"]:
         if raw_result and raw_spec:
             r, s = str(raw_result).lower(), str(raw_spec).lower()
             if r in s or s in r or any(w in s for w in r.split()):
@@ -142,7 +128,7 @@ def check_compliance(result_int, spec_int, raw_result, raw_spec, key):
         return False, "Textual mismatch"
 
     # Range parameters
-    if key in ["ph_of_10", "bulk_density"]:
+    if key.lower() in ["ph_of_10", "bulk_density", "phof10"]:
         nums_r = re.findall(r"[\d.]+", str(raw_result))
         nums_s = re.findall(r"[\d.]+", str(raw_spec))
         if nums_r and len(nums_s) >= 2:
@@ -183,36 +169,37 @@ def check_or_specs(result_int, spec_value, raw_result, key):
 
 def get_result(key):
     key_norm = normalize(key)
-    aliases = param_aliases.get(key, [])
+    aliases = [normalize(a) for a in param_aliases.get(key, [])]
+    all_matches = [key_norm] + aliases
     
-    # Search through test_parameter_X fields (correct field name pattern)
-    for i in range(1, 25):
-        param_key = f"test_parameter_{i}"
-        result_key = f"observed_results_{i}"
-        
-        param_val = content.get(param_key)
-        if not param_val:
-            continue
-        
-        param_norm = normalize(param_val)
-        
-        # Check key match
-        if key_norm == param_norm or key_norm in param_norm or param_norm in key_norm:
-            result = content.get(result_key)
-            if result:
-                print(f"  ✓ {key}: {param_val} -> {result}")
-                return result
-        
-        # Check alias match
-        for alias in aliases:
-            alias_norm = normalize(alias)
-            if alias_norm == param_norm or alias_norm in param_norm or param_norm in alias_norm:
-                result = content.get(result_key)
-                if result:
-                    print(f"  ✓ {key} (via {alias}): {param_val} -> {result}")
-                    return result
+    # Try multiple field naming patterns
+    patterns = [
+        ("test_parameter_{}_name", "test_parameter_{}_observed_results"),  # NEW format
+        ("test_parameter_{}", "observed_results_{}"),  # OLD format
+        ("test_{}_parameter", "test_{}_observed_results"),
+        ("characteristic_{}_name", "characteristic_{}_result")
+    ]
     
-    print(f"  ✗ {key} (normalized: {key_norm})")
+    for param_pattern, result_pattern in patterns:
+        for i in range(1, 25):
+            param_key = param_pattern.format(i)
+            result_key = result_pattern.format(i)
+            
+            param_val = content.get(param_key)
+            if not param_val:
+                continue
+            
+            param_norm = normalize(param_val)
+            
+            # Check if any match (key or alias) is found
+            for match in all_matches:
+                if match == param_norm or match in param_norm or param_norm in match:
+                    result = content.get(result_key)
+                    if result is not None:  # Allow empty string or 0
+                        print(f"  Found: {key} [{param_key}={param_val}] -> {result}")
+                        return result
+    
+    print(f"  NOT FOUND: {key}")
     return None
 
 def get_spec(key):
@@ -221,7 +208,7 @@ def get_spec(key):
     if key_norm in specs_dict:
         return specs_dict[key_norm]
     
-    for alias in param_aliases.get(key, [key]):
+    for alias in param_aliases.get(key, []):
         alias_norm = normalize(alias)
         if alias_norm in specs_dict:
             return specs_dict[alias_norm]
@@ -233,19 +220,41 @@ def get_spec(key):
     return None
 
 def get_salmonella_sample():
-    patterns = ["15x25 g", "5x75 g", "3x125 g", "375 g", "15x25g", "5x75g", "3x125g", "375g"]
-    for i in range(1, 21):
-        for prefix in ["test_", ""]:
-            param_key = f"{prefix}{i}_parameter" if prefix else f"test_parameter_{i}"
-            result_key = f"{prefix}{i}_observed_results" if prefix else f"observed_results_{i}"
-            
+    patterns = ["15x25 g", "5x75 g", "3x125 g", "375 g", "15x25g", "5x75g", "3x125g", "375g", "25g"]
+    
+    # Try multiple field naming patterns
+    name_patterns = [
+        "test_parameter_{}_name",
+        "test_parameter_{}",
+        "characteristic_{}_name"
+    ]
+    
+    spec_patterns = [
+        "test_parameter_{}_specification",
+        "specification_{}",
+        "characteristic_{}_uom"
+    ]
+    
+    for i in range(1, 25):
+        # Check parameter name fields
+        for name_pattern in name_patterns:
+            param_key = name_pattern.format(i)
             param_val = str(content.get(param_key, ""))
+            
             if "salmonella" in param_val.lower():
-                for field in [result_key, param_key]:
-                    val = str(content.get(field, ""))
+                # Check in the parameter name itself (e.g., "Salmonella/25g")
+                for pattern in patterns:
+                    if pattern.lower() in param_val.lower():
+                        return pattern
+                
+                # Check in specification field
+                for spec_pattern in spec_patterns:
+                    spec_key = spec_pattern.format(i)
+                    spec_val = str(content.get(spec_key, ""))
                     for pattern in patterns:
-                        if pattern.lower() in val.lower():
+                        if pattern.lower() in spec_val.lower():
                             return pattern
+    
     return None
 
 # === HTML REPORT ===
@@ -259,7 +268,6 @@ def get_salmonella_sample():
 output_file = os.path.splitext(json_file)[0] + f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}_report.html"
 with open(output_file, "w", encoding="utf-8") as out:
     out.write(f"<html><body>\n<h1>Lab Report: {product_name} ({company_name})</h1>\n")
-    #out.write(f"<p>JSON: {os.path.basename(json_file)} | Specs: {os.path.basename(specs_file)}</p>\n")
     out.write("<table border='1' cellspacing='0' cellpadding='5'>\n")
     out.write("<tr><th>Parameter</th><th>Result</th><th>Spec</th><th>Status</th></tr>\n")
 
@@ -298,7 +306,7 @@ with open(output_file, "w", encoding="utf-8") as out:
     out.write("</body></html>\n")
 
 print(f"\nReport: {output_file}")
-# === RUN CLEANUP SCRIPT ===
+
 try:
     subprocess.run(["python", "cleanup_files.py"], check=True)
     print("cleanup_files.py executed successfully.")
