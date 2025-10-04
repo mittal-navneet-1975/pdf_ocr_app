@@ -7,9 +7,9 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\Test\output"
-keys_file = r"C:\Test\keys.txt"
-specs_file = r"C:\Test\specs\WHEY.txt"
+json_dir = r"C:\pdf_OCR_app\output"
+keys_file = r"C:\pdf_OCR_app\keys.txt"
+specs_file = r"C:\pdf_OCR_app\specs\WHEY.txt"
 
 compliance_keys = [
     "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
