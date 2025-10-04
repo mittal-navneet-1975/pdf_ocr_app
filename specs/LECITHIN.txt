@@ -19,4 +19,4 @@ enterobacteriaceae | <10
 coliforms | <10
 coliforms | <3
 e_coli | "Not Detected" OR "Absent" OR "<3"
-salmonella | "Not Detected" OR "Absent" per 375 g"
+salmonella | "Not Detected" OR "Absent" / 375 g"
