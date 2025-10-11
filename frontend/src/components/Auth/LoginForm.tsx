@@ -42,9 +42,9 @@ export function LoginForm() {
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-sm text-blue-800 font-medium mb-2">Demo Accounts:</p>
             <div className="space-y-1 text-xs text-blue-700">
-              <div>Admin: admin@company.com</div>
-              <div>Manager: manager@company.com</div>
-              <div>Operator: operator@company.com</div>
+              <div>Admin: admin</div>
+              <div>Manager: manager</div>
+              <div>Operator: operator</div>
               <div className="text-blue-600 mt-1">Password: any value</div>
             </div>
           </div>
