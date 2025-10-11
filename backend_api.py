@@ -1,71 +1,81 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-import shutil
-import subprocess
-import os
+import requests
+import json
+from mangum import Mangum
 
 app = FastAPI()
 
-# Allow frontend to call backend (adjust origins as needed)
+# CORS - allow your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://pdfocrapp.vercel.app"],  # Change to your frontend URL in production
+    allow_origins=["https://pdfocrapp.vercel.app", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-INPUT_DIR = r"C:\pdf_OCR_app\pdf"
-OUTPUT_DIR = r"C:\pdf_OCR_app\output"
-
-@app.post("/upload-pdf/")
-async def upload_pdf(file: UploadFile = File(...)):
-    # Save uploaded file to INPUT_DIR
-    os.makedirs(INPUT_DIR, exist_ok=True)
-    file_path = os.path.join(INPUT_DIR, file.filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # Call nanoNets.py to process all PDFs in INPUT_DIR
-    try:
-        subprocess.run(["python", "nanoNets.py"], check=True)
-    except subprocess.CalledProcessError as e:
-        return {"success": False, "error": str(e)}
-
-    # List output files with their modification times
-    output_files = [
-        f for f in os.listdir(OUTPUT_DIR)
-        if f.lower().endswith(".html")
-    ]
-
-    if not output_files:
-        return {"success": False, "outputs": []}
-
-    # Sort by modification time (newest first)
-    output_files.sort(
-        key=lambda f: os.path.getmtime(os.path.join(OUTPUT_DIR, f)),
-        reverse=True
-    )
-    return {"success": True, "outputs": output_files}
-
-@app.get("/output/{filename}")
-def get_output_file(filename: str):
-    file_path = os.path.join(OUTPUT_DIR, filename)
-    if not os.path.exists(file_path):
-        return {"error": "File not found"}
-    with open(file_path, "rb") as f:
-        return f.read()
-
-from fastapi import FastAPI
-
-app = FastAPI()
+# Nanonets config
+API_KEY = "dcc5b694-96c8-11f0-b983-1ad2fa14c17a"
+NANONETS_URL = "https://extraction-api.nanonets.com/extract"
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 @app.get("/")
 def read_root():
-    return {"message": "FastAPI backend is running!"}
+    return {"message": "FastAPI backend is running!", "status": "ok"}
 
-# Your other routes...
+@app.post("/upload-pdf/")
+async def upload_pdf(file: UploadFile = File(...)):
+    """
+    Process PDF directly without saving to disk.
+    Calls Nanonets API and returns the result.
+    """
+    try:
+        # Read file content into memory
+        pdf_content = await file.read()
+        
+        # Send directly to Nanonets API
+        files = {"file": (file.filename, pdf_content, "application/pdf")}
+        data = {"output_type": "flat-json"}
+        
+        response = requests.post(
+            NANONETS_URL, 
+            headers=HEADERS, 
+            files=files, 
+            data=data,
+            timeout=60
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        # Normalize content if needed
+        if "content" in result and isinstance(result["content"], str):
+            try:
+                result["content"] = json.loads(result["content"])
+            except json.JSONDecodeError:
+                pass
+        
+        return {
+            "success": True,
+            "filename": file.filename,
+            "data": result
+        }
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            "success": False,
+            "error": f"Nanonets API error: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Processing error: {str(e)}"
+        }
 
-# IMPORTANT: Add this for Vercel
-from mangum import Mangum
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "PDF OCR API"}
+
+# Vercel serverless handler
 handler = Mangum(app)
