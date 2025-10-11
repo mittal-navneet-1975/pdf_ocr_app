@@ -9,7 +9,7 @@ app = FastAPI()
 # Allow frontend to call backend (adjust origins as needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to your frontend URL in production
+    allow_origins=["https://pdfocrapp.vercel.app"],  # Change to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
