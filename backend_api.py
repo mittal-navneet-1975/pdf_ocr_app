@@ -55,3 +55,15 @@ def get_output_file(filename: str):
         return {"error": "File not found"}
     with open(file_path, "rb") as f:
         return f.read()
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+# Your routes here...
+
+# This is required for Vercel
+if __name__ != "__main__":
+    # Vercel serverless function handler
+    handler = app
+app = app
