@@ -7,9 +7,11 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\pdf_OCR_app\output"
-keys_file = r"C:\pdf_OCR_app\keys.txt"
-specs_file = r"C:\pdf_OCR_app\specs\WHEY.txt"
+# Running on Vercel serverless
+    BASE_DIR = "/tmp"
+    json_dir = "/tmp/output"
+    keys_file = "keys.txt"  # Relative to project root
+    specs_file = "specs/WHEY.txt"  # Relative to project root
 
 compliance_keys = [
     "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
