@@ -75,8 +75,8 @@ def process_pdf(pdf_path):
 
     # Extract product and company
     content = response_data.get("content", {})
-    product_name = content.get("product_name") or content.get("product") or ""
-    company_name = content.get("company_name") or content.get("supplier") or content.get("manufacturing_vendor_site_name") or ""
+    product_name = content.get("product_name") or content.get("product") or content.get("sample_type") or""
+    company_name = content.get("company_name") or content.get("supplier") or content.get("sample_name") or content.get("customer_sample_name") or content.get("manufacturing_vendor_site_name") or ""
 
     # Dynamic keywords
     product_key = extract_keywords(product_name)

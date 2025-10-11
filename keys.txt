@@ -1,6 +1,7 @@
 "Whey_Mahaan" - Mandatory Values - {"appearance", "color", "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"}
 "whey_mahaan" - Mandatory Values - {"appearance", "color", "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"}
 "Whey_CalproSpecialities" - Mandatory Values - {"moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold", "Colour/ Appearance", "Taste / Flavour", "Milk solids", "Milk Fat", "Protein", "Ash", "pH of 10", "Bulk Density", "Scorched particles", "Titrable acidity", "Plate Count", "Coliform count", "E.coli", "Shigella", "Listeria Monocytogenes", "Staphylococcus aureus", "B.Cereus"}
+"Whey_Calpro" - Mandatory Values - {"moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold", "Colour/ Appearance", "Taste / Flavour", "Milk solids", "Milk Fat", "Protein", "Ash", "pH of 10", "Bulk Density", "Scorched particles", "Titrable acidity", "Plate Count", "Coliform count", "E.coli", "Shigella", "Listeria Monocytogenes", "Staphylococcus aureus", "B.Cereus"}
 "SOYA LECITHIN" - Mandatory Values - {"moisture", "acetone", "peanut", "peroxide", "gardner", "hexane", "toluene", "enterobacteriaceae", "e_coli", "salmonella"}
 "Soya Lecithin" - Mandatory Values - {"moisture", "acetone", "peanut", "peroxide", "gardner", "hexane", "toluene", "enterobacteriaceae", "e_coli", "salmonella"}
 "NON GMO" - Mandatory Values - {"moisture", "acetone", "peanut", "peroxide", "gardner", "hexane", "toluene", "enterobacteriaceae", "e_coli", "salmonella"}
