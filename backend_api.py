@@ -60,10 +60,12 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-# Your routes here...
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI backend is running!"}
 
-# This is required for Vercel
-if __name__ != "__main__":
-    # Vercel serverless function handler
-    handler = app
-app = app
+# Your other routes...
+
+# IMPORTANT: Add this for Vercel
+from mangum import Mangum
+handler = Mangum(app)
