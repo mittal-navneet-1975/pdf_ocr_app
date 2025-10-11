@@ -2,8 +2,9 @@ import os
 import glob
 
 def cleanup_files():
-    pdf_dir = r"C:\pdf_OCR_app\pdf"
-    json_dir = r"C:\pdf_OCR_app\output"
+    # Running on Vercel serverless
+    pdf_dir = "/tmp/pdf"
+    json_dir = "/tmp/output"
 
     # --- Delete PDFs (deduplicated) ---
     pdf_files = set(glob.glob(os.path.join(pdf_dir, "*.pdf")) + glob.glob(os.path.join(pdf_dir, "*.PDF")))
