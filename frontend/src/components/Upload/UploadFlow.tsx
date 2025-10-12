@@ -52,7 +52,7 @@ export function UploadFlow() {
       // small delay to allow UI to update
       await new Promise((r) => setTimeout(r, 500));
 
-      const res = await fetch('https://pdf-ocr-backend-nine.vercel.app/upload-pdf/', {
+      const res = await fetch('http://localhost:8000/upload-pdf/', {
         method: 'POST',
         body: formData,
       });
