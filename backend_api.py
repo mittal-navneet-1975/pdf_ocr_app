@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import json
 from mangum import Mangum
+handler = Mangum(app, lifespan="off")
+app = handler  # Expose both for compatibility
 
 app = FastAPI()
 
