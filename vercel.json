@@ -1,6 +1,6 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/(.*)", "dest": "api/backend_api.py" }
+    { "src": "/(.*)", "dest": "backend_api.py" }
   ]
 }
