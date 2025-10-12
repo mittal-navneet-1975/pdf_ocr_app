@@ -4,8 +4,8 @@ import json
 import subprocess
 
 # === CONFIG ===
-INPUT_DIR = r"https://vercel.com/naveens-projects-fc29b26e/pdf-ocr-backend/stores/blob/store_AhHelVRxp5azLF4v/browser?directory=pdf"
-json_dir = r"https://vercel.com/naveens-projects-fc29b26e/pdf-ocr-backend/stores/blob/store_AhHelVRxp5azLF4v/browser?directory=pdf"
+INPUT_DIR = r"C:\pdf_ocr\pdf_ocr_app\pdf"
+json_dir = r"C:\pdf_ocr\pdf_ocr_app\output"
 
 API_KEY = "dcc5b694-96c8-11f0-b983-1ad2fa14c17a"
 URL = "https://extraction-api.nanonets.com/extract"
