@@ -30,7 +30,7 @@ export function UploadConfirmation({
 const formData = new FormData();
 formData.append("file", selectedFile);
 
-    fetch(`https://pdf-ocr-app-snowy.vercel.app/output/${encodeURIComponent(htmlFile)}`)
+    fetch(`http://pdf-ocr-app-snowy.vercel.app/output/${encodeURIComponent(htmlFile)}`)
       .then((res) => res.text())
       .then((rawHtml) => {
         let html = rawHtml;
