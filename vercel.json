@@ -1,1 +1,15 @@
-backend_api.py - Serverless Version
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend_api.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "backend_api.py"
+    }
+  ]
+}
