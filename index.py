@@ -2,7 +2,6 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 import json
-from mangum import Mangum
 
 app = FastAPI()
 
@@ -67,4 +66,4 @@ async def upload_pdf(file: UploadFile = File(...)):
 def health_check():
     return {"status": "healthy", "service": "PDF OCR API"}
 
-handler = Mangum(app)
+# No handler or Mangum needed - Vercel handles it automatically
