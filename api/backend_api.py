@@ -77,4 +77,4 @@ def health_check():
     return {"status": "healthy", "service": "PDF OCR API"}
 
 # Vercel serverless handler
-#handler = Mangum(app)
+handler = Mangum(app)
