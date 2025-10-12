@@ -1,8 +1,6 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/upload-pdf/?", "dest": "api/backend_api.py/upload-pdf/" },
-    { "src": "/health/?", "dest": "api/backend_api.py/health/" },
-    { "src": "/", "dest": "api/backend_api.py/" }
+    { "src": "/(.*)", "dest": "api/backend_api.py" }
   ]
 }
