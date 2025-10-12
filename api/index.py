@@ -67,4 +67,4 @@ async def upload_pdf(file: UploadFile = File(...)):
 def health_check():
     return {"status": "healthy", "service": "PDF OCR API"}
 
-handler = Mangum(app, lifespan="off")
+handler = Mangum(app)
