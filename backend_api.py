@@ -3,8 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import json
 from mangum import Mangum
-handler = Mangum(app, lifespan="off")
-app = handler  # Expose both for compatibility
 
 app = FastAPI()
 
@@ -69,4 +67,4 @@ async def upload_pdf(file: UploadFile = File(...)):
 def health_check():
     return {"status": "healthy", "service": "PDF OCR API"}
 
-handler = Mangum(app)
+handler = Mangum(app, lifespan="off")
