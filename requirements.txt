@@ -1,5 +1,4 @@
 fastapi
 mangum
-uvicorn
 requests
 python-multipart

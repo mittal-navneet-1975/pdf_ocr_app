@@ -6,7 +6,6 @@ from mangum import Mangum
 
 app = FastAPI()
 
-# CORS - allow your frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://pdfocrapp.vercel.app", "http://localhost:5173"],
@@ -15,7 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Nanonets config
 API_KEY = "dcc5b694-96c8-11f0-b983-1ad2fa14c17a"
 NANONETS_URL = "https://extraction-api.nanonets.com/extract"
 HEADERS = {"Authorization": f"Bearer {API_KEY}"}
@@ -26,15 +24,8 @@ def read_root():
 
 @app.post("/upload-pdf/")
 async def upload_pdf(file: UploadFile = File(...)):
-    """
-    Process PDF directly without saving to disk.
-    Calls Nanonets API and returns the result.
-    """
     try:
-        # Read file content into memory
         pdf_content = await file.read()
-        
-        # Send directly to Nanonets API
         files = {"file": (file.filename, pdf_content, "application/pdf")}
         data = {"output_type": "flat-json"}
         
@@ -49,7 +40,6 @@ async def upload_pdf(file: UploadFile = File(...)):
         response.raise_for_status()
         result = response.json()
         
-        # Normalize content if needed
         if "content" in result and isinstance(result["content"], str):
             try:
                 result["content"] = json.loads(result["content"])
@@ -77,5 +67,4 @@ async def upload_pdf(file: UploadFile = File(...)):
 def health_check():
     return {"status": "healthy", "service": "PDF OCR API"}
 
-# Vercel serverless handler
 handler = Mangum(app)
