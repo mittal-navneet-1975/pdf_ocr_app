@@ -7,9 +7,9 @@ import sys
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\pdf_OCR_app\output"
-keys_file = r"C:\pdf_OCR_app\keys.txt"
-specs_file = r"C:\pdf_OCR_app\specs\LECITHIN.txt"
+json_dir = r"C:\pdf_ocr\pdf_ocr_app\output"
+keys_file = r"C:\pdf_ocr\pdf_ocr_app\keys.txt"
+specs_file = r"C:\pdf_ocr\pdf_ocr_app\specs\LECITHIN.txt"
 
 compliance_keys = [
     "moisture", "acetone", "peanut", "peroxide", "gardner", "hexane", "toluene",

@@ -7,9 +7,9 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\pdf_OCR_app\output"
-keys_file = r"C:\pdf_OCR_app\keys.txt"
-specs_file = r"C:\pdf_OCR_app\specs\LECITHIN.txt"
+json_dir = r"C:\pdf_ocr\pdf_ocr_app\output"
+keys_file = r"C:\pdf_ocr\pdf_ocr_app\keys.txt"
+specs_file = r"C:\pdf_ocr\pdf_ocr_app\specs\LECITHIN.txt"
 
 # Parameters considered for compliance
 compliance_keys = [
