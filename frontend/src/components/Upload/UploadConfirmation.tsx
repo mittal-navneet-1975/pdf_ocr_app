@@ -27,7 +27,7 @@ export function UploadConfirmation({
     const htmlFile = outputs.find((o) => o.endsWith('.html'));
     if (!htmlFile) return;
     
-    fetch(`https://pdf-ocr-backend-nine.vercel.app/output/${encodeURIComponent(htmlFile)}`)
+    fetch(`http://localhost:8000/output/${encodeURIComponent(htmlFile)}`)
       .then((res) => res.text())
       .then((rawHtml) => {
         let html = rawHtml;
