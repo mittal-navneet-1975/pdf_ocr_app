@@ -34,6 +34,7 @@ export function UploadConfirmation({
 
         // If escaped, unescape it
         try {
+          console.log("Current path:", window.location.href);
           html = JSON.parse(html);
         } catch {
           // not JSON encoded, skip
