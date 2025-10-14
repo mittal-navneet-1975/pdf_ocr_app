@@ -4,70 +4,44 @@ import { CheckCircle, FileText } from 'lucide-react';
 interface UploadConfirmationProps {
   reportId: string;
   fileName: string;
-  outputs?: string[];
+  htmlReport?: string;
   onStartNew: () => void;
-}
-
-function unescapeHtmlEntities(html: string): string {
-  const txt = document.createElement('textarea');
-  txt.innerHTML = html;
-  return txt.value;
 }
 
 export function UploadConfirmation({
   reportId,
   fileName,
-  outputs = [],
+  htmlReport,
   onStartNew,
 }: UploadConfirmationProps) {
-  const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [complianceStatus, setComplianceStatus] = useState<string>('Loading...');
 
   useEffect(() => {
-    const htmlFile = outputs.find((o) => o.endsWith('.html'));
-    if (!htmlFile) return;
+    if (!htmlReport) {
+      setComplianceStatus('No report available');
+      return;
+    }
 
-    // Use relative API path for Vercel deployment
-    fetch(`http://pdf-ocr-backend-one.vercel.app/output/${encodeURIComponent(htmlFile)}`)
-      .then((res) => res.text())
-      .then((rawHtml) => {
-        let html = rawHtml;
+    try {
+      // Extract compliance status from HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlReport, 'text/html');
 
-        // If escaped, unescape it
-        try {
-          html = JSON.parse(html);
-        } catch {
-          // not JSON encoded, skip
-        }
+      const h3 = doc.querySelector('h3');
+      const text = h3?.textContent?.toLowerCase() || '';
 
-        html = unescapeHtmlEntities(html);
-
-        // Optional cleanup
-        html = html.replace(/\\r\\n|\\n|\\r/g, '');
-
-        // Save to render
-        setReportHtml(html);
-
-        // Extract compliance status from HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        const h3 = doc.querySelector('h3');
-        const text = h3?.textContent?.toLowerCase() || '';
-
-        if (text.includes('non-compliance') || text.includes('non compliant')) {
-          setComplianceStatus('Non-Compliant');
-        } else if (text.includes('compliant')) {
-          setComplianceStatus('Compliant');
-        } else {
-          setComplianceStatus('Unknown');
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching report:', err);
-        setComplianceStatus('Error loading report');
-      });
-  }, [outputs]);
+      if (text.includes('non-compliant') || text.includes('non compliant')) {
+        setComplianceStatus('Non-Compliant');
+      } else if (text.includes('compliant')) {
+        setComplianceStatus('Compliant');
+      } else {
+        setComplianceStatus('Unknown');
+      }
+    } catch (err) {
+      console.error('Error parsing report:', err);
+      setComplianceStatus('Error parsing report');
+    }
+  }, [htmlReport]);
 
   return (
     <div className="text-center">
@@ -103,7 +77,7 @@ export function UploadConfirmation({
       </div>
 
       <div className="space-y-4">
-        {reportHtml ? (
+        {htmlReport ? (
           <div className="border rounded-lg p-6 text-left bg-white max-h-[600px] overflow-auto">
             <style>{`
               .report-container h1 {
@@ -143,7 +117,12 @@ export function UploadConfirmation({
                 margin-top: 20px;
                 padding: 15px;
                 border-radius: 8px;
-                background-color: #fee;
+              }
+              .report-container h3[style*="color:green"] {
+                background-color: #f0fdf4;
+              }
+              .report-container h3[style*="color:red"] {
+                background-color: #fef2f2;
               }
               .report-container small {
                 font-size: 12px;
@@ -153,7 +132,7 @@ export function UploadConfirmation({
             `}</style>
             <div 
               className="report-container"
-              dangerouslySetInnerHTML={{ __html: reportHtml }}
+              dangerouslySetInnerHTML={{ __html: htmlReport }}
             />
           </div>
         ) : (
