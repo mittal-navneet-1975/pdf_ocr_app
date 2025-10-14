@@ -289,8 +289,8 @@ with open(output_file, "w", encoding="utf-8") as out:
 
 print(f"\nReport written to: {output_file}")
 # === RUN CLEANUP SCRIPT ===
-try:
-    subprocess.run(["python", "cleanup_files.py"], check=True)
-    print("cleanup_files.py executed successfully.")
-except Exception as e:
-    print(f"Error running cleanup_files.py: {e}")
+# try:
+#     subprocess.run(["python", "cleanup_files.py"], check=True)
+#     print("cleanup_files.py executed successfully.")
+# except Exception as e:
+#     print(f"Error running cleanup_files.py: {e}")
