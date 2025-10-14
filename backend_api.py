@@ -25,7 +25,7 @@ app.add_middleware(
 # Use temp directory for Vercel (ephemeral filesystem)
 TEMP_DIR = tempfile.gettempdir()
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(TEMP_DIR, "output")
+OUTPUT_DIR = os.path.join(tempfile.gettempdir(), "output")
 SPECS_DIR = os.path.join(TEMP_DIR, "specs")
 KEYS_FILE = os.path.join(CURRENT_DIR, "keys.txt")
 

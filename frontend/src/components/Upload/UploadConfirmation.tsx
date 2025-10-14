@@ -28,7 +28,7 @@ export function UploadConfirmation({
     if (!htmlFile) return;
 
     // Use relative API path for Vercel deployment
-    fetch(`/api/output/${encodeURIComponent(htmlFile)}`)
+    fetch(`http://pdf-ocr-backend-one.vercel.app/output/${encodeURIComponent(htmlFile)}`)
       .then((res) => res.text())
       .then((rawHtml) => {
         let html = rawHtml;
