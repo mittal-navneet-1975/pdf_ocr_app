@@ -2,8 +2,14 @@ import os
 import glob
 
 def cleanup_files():
-    pdf_dir = r"C:\pdf_ocr\pdf_ocr_app\pdf"
-    json_dir = r"C:\pdf_ocr\pdf_ocr_app\output"
+    CURRENT_DIR = os.getcwd()
+
+    pdf_dir = os.path.join(CURRENT_DIR, "pdf")
+    json_dir = os.path.join(CURRENT_DIR, "output")
+
+    # Create directories if they don't exist
+    os.makedirs(pdf_dir, exist_ok=True)
+    os.makedirs(json_dir, exist_ok=True)
 
     # --- Delete PDFs (deduplicated) ---
     pdf_files = set(glob.glob(os.path.join(pdf_dir, "*.pdf")) + glob.glob(os.path.join(pdf_dir, "*.PDF")))

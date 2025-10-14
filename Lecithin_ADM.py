@@ -4,12 +4,19 @@ import os
 import glob
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\pdf_ocr\pdf_ocr_app\output"
-keys_file = r"C:\pdf_ocr\pdf_ocr_app\keys.txt"
-specs_file = r"C:\pdf_ocr\pdf_ocr_app\specs\LECITHIN.txt"
+CURRENT_DIR = os.getcwd()
+
+json_dir = os.path.join(CURRENT_DIR, "output")
+keys_file = os.path.join(CURRENT_DIR, "keys.txt")
+specs_file = os.path.join(CURRENT_DIR, "specs", "LECITHIN.txt")
+
+# Create directories if they don't exist
+os.makedirs(json_dir, exist_ok=True)
+os.makedirs(os.path.dirname(specs_file), exist_ok=True)
 
 compliance_keys = [
     "moisture", "acetone", "peanut", "peroxide", "gardner", "hexane", "toluene",
