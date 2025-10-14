@@ -27,14 +27,14 @@ export function UploadConfirmation({
     const htmlFile = outputs.find((o) => o.endsWith('.html'));
     if (!htmlFile) return;
 
-    fetch(`http://pdf-ocr-backend-one.vercel.app/output/${encodeURIComponent(htmlFile)}`)
+    // Use relative API path for Vercel deployment
+    fetch(`/api/output/${encodeURIComponent(htmlFile)}`)
       .then((res) => res.text())
       .then((rawHtml) => {
         let html = rawHtml;
 
         // If escaped, unescape it
         try {
-          console.log("Current path:", window.location.href);
           html = JSON.parse(html);
         } catch {
           // not JSON encoded, skip
