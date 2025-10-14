@@ -1,180 +1,151 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-import requests
-import json
-import subprocess
-import os
-import tempfile
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, FileText } from 'lucide-react';
 
-app = FastAPI()
+interface UploadConfirmationProps {
+  reportId: string;
+  fileName: string;
+  htmlReport?: string;
+  onStartNew: () => void;
+}
 
-# CORS - allow your frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://pdfocr-n7gwo6r0c-navneet-mittals-projects.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+export function UploadConfirmation({
+  reportId,
+  fileName,
+  htmlReport,
+  onStartNew,
+}: UploadConfirmationProps) {
+  const [complianceStatus, setComplianceStatus] = useState<string>('Loading...');
 
-# Use temp directory for Vercel (ephemeral filesystem)
-TEMP_DIR = tempfile.gettempdir()
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR = os.path.join(TEMP_DIR, "output")
-SPECS_DIR = os.path.join(TEMP_DIR, "specs")
-KEYS_FILE = os.path.join(CURRENT_DIR, "keys.txt")
+  useEffect(() => {
+    if (!htmlReport) {
+      setComplianceStatus('No report available');
+      return;
+    }
 
-# Create directories if they don't exist
-os.makedirs(JSON_DIR, exist_ok=True)
-os.makedirs(SPECS_DIR, exist_ok=True)
+    try {
+      // Extract compliance status from HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlReport, 'text/html');
 
-print(f"[STARTUP] CURRENT_DIR: {CURRENT_DIR}")
-print(f"[STARTUP] TEMP_DIR: {TEMP_DIR}")
-print(f"[STARTUP] JSON_DIR: {JSON_DIR}")
-print(f"[STARTUP] KEYS_FILE: {KEYS_FILE}")
+      const h3 = doc.querySelector('h3');
+      const text = h3?.textContent?.toLowerCase() || '';
 
-# Nanonets config
-API_KEY = "dcc5b694-96c8-11f0-b983-1ad2fa14c17a"
-NANONETS_URL = "https://extraction-api.nanonets.com/extract"
-HEADERS = {"Authorization": f"Bearer {API_KEY}"}
+      if (text.includes('non-compliant') || text.includes('non compliant')) {
+        setComplianceStatus('Non-Compliant');
+      } else if (text.includes('compliant')) {
+        setComplianceStatus('Compliant');
+      } else {
+        setComplianceStatus('Unknown');
+      }
+    } catch (err) {
+      console.error('Error parsing report:', err);
+      setComplianceStatus('Error parsing report');
+    }
+  }, [htmlReport]);
 
-@app.get("/")
-def read_root():
-    print("[API] GET / called")
-    return {"message": "FastAPI backend is running!", "status": "ok"}
+  return (
+    <div className="text-center">
+      <CheckCircle className="mx-auto h-16 w-16 text-green-600 mb-6" />
+      <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload Complete!</h2>
+      <p className="text-gray-600 mb-8">Your document has been processed successfully</p>
 
-@app.post("/upload-pdf/")
-async def upload_pdf(file: UploadFile = File(...)):
-    """
-    Process PDF using Nanonets API and optionally run parser.
-    """
-    try:
-        print(f"\n[API] POST /upload-pdf/ - Received file: {file.filename}")
-        print(f"[API] Content-Type: {file.content_type}")
-        
-        # Read file content into memory
-        pdf_content = await file.read()
-        print(f"[API] File size: {len(pdf_content)} bytes")
-        
-        # Send to Nanonets API
-        files = {"file": (file.filename, pdf_content, "application/pdf")}
-        data = {"output_type": "flat-json"}
-        
-        print(f"[API] Calling Nanonets API...")
-        response = requests.post(
-            NANONETS_URL, 
-            headers=HEADERS, 
-            files=files, 
-            data=data,
-            timeout=60
-        )
-        
-        print(f"[API] Nanonets response status: {response.status_code}")
-        response.raise_for_status()
-        result = response.json()
-        print(f"[API] Nanonets API success")
-        
-        # Normalize content if needed
-        if "content" in result and isinstance(result["content"], str):
-            try:
-                result["content"] = json.loads(result["content"])
-            except json.JSONDecodeError:
-                pass
-        
-        # Save JSON output
-        name_without_ext = os.path.splitext(file.filename)[0]
-        json_output_path = os.path.join(JSON_DIR, f"{name_without_ext}.json")
-        
-        with open(json_output_path, "w", encoding="utf-8") as f:
-            json.dump(result, f, ensure_ascii=False, indent=4)
-        
-        print(f"[API] JSON saved: {json_output_path}")
-        
-        # Try to run parser if it exists
-        content = result.get("content", {})
-        product_name = content.get("product_name") or content.get("product") or ""
-        company_name = content.get("company_name") or content.get("supplier") or content.get("manufacturing_vendor_site_name") or ""
-        
-        product_key = extract_keywords(product_name)
-        company_key = extract_keywords(company_name)
-        
-        print(f"[API] Dynamic keywords: Product='{product_key}', Company='{company_key}'")
-        
-        if product_key and company_key:
-            parser_file = f"{product_key}_{company_key}.py"
-            parser_path = os.path.join(CURRENT_DIR, parser_file)
-            
-            if os.path.exists(parser_path):
-                try:
-                    print(f"[API] Running parser: {parser_file}")
-                    subprocess.run(
-                        ["python", parser_path, json_output_path],
-                        check=True,
-                        cwd=CURRENT_DIR,
-                        capture_output=True
-                    )
-                    print(f"[API] Parser executed successfully")
-                except subprocess.CalledProcessError as e:
-                    print(f"[API] Parser error: {e}")
-            else:
-                print(f"[API] Parser not found: {parser_file}")
-        
-        # Check if HTML report was generated
-        html_report_content = None
-        html_files = [f for f in os.listdir(JSON_DIR) if f.endswith('_report.html')]
-        if html_files:
-            # Get the most recently created HTML file
-            html_files.sort(key=lambda f: os.path.getmtime(os.path.join(JSON_DIR, f)), reverse=True)
-            html_file_path = os.path.join(JSON_DIR, html_files[0])
-            try:
-                with open(html_file_path, 'r', encoding='utf-8') as f:
-                    html_report_content = f.read()
-                print(f"[API] HTML report loaded: {html_files[0]}")
-            except Exception as e:
-                print(f"[API] Error reading HTML: {e}")
-        
-        # Return success with JSON data and HTML report
-        print(f"[API] Returning success response")
-        return {
-            "success": True,
-            "filename": file.filename,
-            "data": result,
-            "htmlReport": html_report_content
-        }
-        
-    except requests.exceptions.RequestException as e:
-        print(f"[API] Nanonets API error: {str(e)}")
-        return {
-            "success": False,
-            "error": f"Nanonets API error: {str(e)}"
-        }
-    except Exception as e:
-        print(f"[API] Processing error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "success": False,
-            "error": f"Processing error: {str(e)}"
-        }
+      <div className="bg-gray-50 rounded-lg p-6 mb-8">
+        <div className="flex items-center justify-center mb-4">
+          <FileText className="h-8 w-8 text-blue-600 mr-3" />
+          <div className="text-left">
+            <p className="font-semibold text-gray-900">{fileName}</p>
+            <p className="text-sm text-gray-600">Report ID: {reportId}</p>
+          </div>
+        </div>
 
-def extract_keywords(name):
-    """
-    Extract a meaningful keyword from a product name.
-    Ignores common words like 'Non', 'GMO', 'Soya', 'Whey', 'Powder', etc.
-    """
-    if not name:
-        return None
-    ignore_words = {"non", "gmo", "soya", "powder", "permeate", "milk", "optilec", "optileec"}
-    words = [w for w in name.split() if w.lower() not in ignore_words]
-    if not words:
-        return None
-    return words[0].strip()
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-gray-600">Status</p>
+            <p
+              className={`font-semibold ${
+                complianceStatus === 'Compliant'
+                  ? 'text-green-600'
+                  : complianceStatus === 'Non-Compliant'
+                  ? 'text-red-600'
+                  : 'text-gray-600'
+              }`}
+            >
+              {complianceStatus}
+            </p>
+          </div>
+        </div>
+      </div>
 
-@app.get("/health")
-def health_check():
-    print("[API] GET /health called")
-    return {"status": "healthy", "service": "PDF OCR API"}
+      <div className="space-y-4">
+        {htmlReport ? (
+          <div className="border rounded-lg p-6 text-left bg-white max-h-[600px] overflow-auto">
+            <style>{`
+              .report-container h1 {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                color: #1f2937;
+              }
+              .report-container table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                background: white;
+              }
+              .report-container table th {
+                background-color: #f3f4f6;
+                padding: 12px;
+                text-align: left;
+                font-weight: 600;
+                border: 1px solid #d1d5db;
+                color: #374151;
+              }
+              .report-container table td {
+                padding: 10px 12px;
+                border: 1px solid #d1d5db;
+                color: #1f2937;
+              }
+              .report-container table tr:nth-child(even) {
+                background-color: #f9fafb;
+              }
+              .report-container table tr:hover {
+                background-color: #f3f4f6;
+              }
+              .report-container h3 {
+                font-size: 20px;
+                font-weight: bold;
+                margin-top: 20px;
+                padding: 15px;
+                border-radius: 8px;
+              }
+              .report-container h3[style*="color:green"] {
+                background-color: #f0fdf4;
+              }
+              .report-container h3[style*="color:red"] {
+                background-color: #fef2f2;
+              }
+              .report-container small {
+                font-size: 12px;
+                display: block;
+                margin-top: 4px;
+              }
+            `}</style>
+            <div 
+              className="report-container"
+              dangerouslySetInnerHTML={{ __html: htmlReport }}
+            />
+          </div>
+        ) : (
+          <p className="text-gray-500">Report not available yet...</p>
+        )}
+
+        <button
+          onClick={onStartNew}
+          className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200"
+        >
+          Upload Another Document
+        </button>
+      </div>
+    </div>
+  );
+}
