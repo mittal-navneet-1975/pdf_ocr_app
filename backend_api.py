@@ -181,7 +181,7 @@ def get_timestamp():
 def health_check():
     return {"status": "healthy", "service": "PDF OCR API"}
 
-@app.get("/api/output/{filename:path}")
+@app.get("/output/{filename:path}")
 def get_output_file(filename: str):
     """
     Serve a generated report saved under /tmp/output/<filename>.
