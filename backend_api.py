@@ -11,7 +11,7 @@ app = FastAPI()
 # CORS - allow your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://pdfocrapp.vercel.app", "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["https://pdfocr-2kqm0juns-navneet-mittals-projects.vercel.app", "https://pdfocrapp.vercel.app", "http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
