@@ -52,12 +52,56 @@ export function UploadFlow() {
       // small delay to allow UI to update
       await new Promise((r) => setTimeout(r, 500));
 
-      const res = await fetch('/api/upload-pdf/', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      const receivedOutputs: string[] = data.outputs || [];
+      // Try local serverless endpoint first (same-origin, HTTPS). If it returns 405/empty,
+      // fallback to the external backend over HTTPS.
+      const candidateUrls = [
+        '/api/upload-pdf/',
+        'https://pdf-ocr-backend-one.vercel.app/upload-pdf/'
+      ];
+      let data: any = null;
+      let lastError: any = null;
+
+      for (const url of candidateUrls) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            body: formData,
+          });
+
+          // If method not allowed or server error, try next candidate
+          if (res.status === 405 || res.status >= 500) {
+            lastError = { status: res.status, url };
+            continue;
+          }
+
+          // Read raw text then try parse JSON (avoid throwing on empty body)
+          const text = await res.text();
+          if (!text) {
+            lastError = { status: res.status, url, message: 'empty response' };
+            continue;
+          }
+          try {
+            data = JSON.parse(text);
+          } catch {
+            // server might return plain text or HTML; wrap it
+            data = { raw: text };
+          }
+          // success — break out
+          break;
+        } catch (err) {
+          lastError = err;
+          // try next URL
+        }
+      }
+
+      if (!data) {
+        console.error('Upload failed (all endpoints)', lastError);
+        throw new Error('Upload failed');
+      }
+
+      // normalize outputs (support multiple response shapes)
+      const receivedOutputs: string[] =
+        data.outputs || data.data?.outputs || (Array.isArray(data) ? data : []) || [];
       setOutputs(receivedOutputs);
 
       // Continue simulated progress after receiving outputs
