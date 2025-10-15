@@ -7,9 +7,15 @@ import subprocess
 from datetime import datetime
 
 # === CONFIG ===
-json_dir = r"C:\pdf_ocr\pdf_ocr_app\output"
-keys_file = r"C:\pdf_ocr\pdf_ocr_app\keys.txt"
-specs_file = r"C:\pdf_ocr\pdf_ocr_app\specs\WHEY.txt"
+CURRENT_DIR = os.getcwd()
+
+json_dir = os.path.join(CURRENT_DIR, "output")
+keys_file = os.path.join(CURRENT_DIR, "keys.txt")
+specs_file = os.path.join(CURRENT_DIR, "specs", "WHEY.txt")
+
+# Create directories if they don't exist
+os.makedirs(json_dir, exist_ok=True)
+os.makedirs(os.path.dirname(specs_file), exist_ok=True)
 
 compliance_keys = [
     "moisture", "total_plate_count", "enterobacteriaceae", "salmonella", "yeast_and_mold"
