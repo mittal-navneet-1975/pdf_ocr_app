@@ -3,17 +3,18 @@
   "builds": [
     {
       "src": "backend_api.py",
-      "use": "@vercel/python",
-      "config": {
-        "wsgiHandler": "backend_api:app",
-        "runtime": "python3.12"
-      }
+      "use": "@vercel/python"
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "backend_api.py"
-    }
+    { "src": "/upload-pdf/?", "dest": "/backend_api.py" },
+    { "src": "/health/?", "dest": "/backend_api.py" },
+    { "src": "/", "dest": "/backend_api.py" },
+    { "src": "/(.*)", "dest": "/frontend/$1" }
   ]
 }
