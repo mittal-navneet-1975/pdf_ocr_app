@@ -30,7 +30,8 @@ export function UploadConfirmation({
       const h3 = doc.querySelector('h3');
       const text = h3?.textContent?.toLowerCase() || '';
 
-      if (text.includes('non-compliant') || text.includes('non compliant')) {
+      // if (text.includes('non-compliant') || text.includes('non compliant')) {
+      if (text.includes('non')) {
         setComplianceStatus('Non-Compliant');
       } else if (text.includes('compliant')) {
         setComplianceStatus('Compliant');
