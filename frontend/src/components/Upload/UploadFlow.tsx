@@ -13,7 +13,8 @@ export function UploadFlow() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [reportId, setReportId] = useState<string>('');
-  const [outputs, setOutputs] = useState<string[]>([]);
+  const [htmlReport, setHtmlReport] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
   const steps = [
     { id: 1, title: 'Select Product', description: 'Choose the product category' },
@@ -34,17 +35,19 @@ export function UploadFlow() {
       setCurrentStep(currentStep - 1);
     }
   };
+
   const handleFileUpload = async (file: File) => {
     setUploadedFile(file);
-    setOutputs([]);
+    setHtmlReport('');
+    setError('');
     setCurrentStep(4);
-
     setProcessingStatus('parsing');
 
     try {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Simulate parsing delay
       await new Promise((r) => setTimeout(r, 500));
 
       // Call backend
@@ -52,25 +55,46 @@ export function UploadFlow() {
         method: 'POST',
         body: formData,
       });
+
+      // Check if response is ok
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
       
-      // Store the htmlReport from backend response
-      const htmlReport = data.htmlReport || null;
-      setOutputs([htmlReport]); // Store htmlReport in outputs
+      // Log the response to debug
+      console.log('Backend response:', data);
+      
+      // Check multiple possible response structures
+      const report = data.htmlReport || data.html_report || data.report || data.html || '';
+      
+      if (!report) {
+        console.warn('No HTML report found in response. Response keys:', Object.keys(data));
+        throw new Error('No HTML report received from backend');
+      }
 
+      setHtmlReport(report);
+
+      // Simulate processing steps
       setProcessingStatus('processing');
-      setTimeout(() => setProcessingStatus('rules'), 1200);
-      setTimeout(() => setProcessingStatus('report'), 2600);
-      setTimeout(() => {
-        setProcessingStatus('complete');
-        setReportId('RPT-' + Date.now());
-      }, 3800);
+      await new Promise((r) => setTimeout(r, 1200));
+      
+      setProcessingStatus('rules');
+      await new Promise((r) => setTimeout(r, 1400));
+      
+      setProcessingStatus('report');
+      await new Promise((r) => setTimeout(r, 1200));
+      
+      setProcessingStatus('complete');
+      setReportId('RPT-' + Date.now());
+
     } catch (err) {
-      console.error('Upload error', err);
+      console.error('Upload error:', err);
       setProcessingStatus('error');
+      setError(err instanceof Error ? err.message : 'An error occurred during upload');
     }
   };
-  // ...existing code...
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -136,16 +160,40 @@ export function UploadFlow() {
         {currentStep === 4 && (
           <div>
             <ProcessingStatus status={processingStatus} />
-            <div className="mt-6 flex justify-center">
+            
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{error}</p>
+                <button
+                  onClick={handleBack}
+                  className="mt-2 text-sm text-red-700 underline"
+                >
+                  Go back and try again
+                </button>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-center gap-4">
+              {processingStatus === 'error' && (
+                <button
+                  onClick={handleBack}
+                  className="px-6 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
+                >
+                  Try Again
+                </button>
+              )}
               <button
                 onClick={() => {
-                  // go to confirmation only when complete
                   if (processingStatus === 'complete') {
                     setCurrentStep(5);
                   }
                 }}
                 disabled={processingStatus !== 'complete'}
-                className={`px-6 py-2 rounded-lg text-white ${processingStatus === 'complete' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
+                className={`px-6 py-2 rounded-lg text-white ${
+                  processingStatus === 'complete' 
+                    ? 'bg-blue-600 hover:bg-blue-700' 
+                    : 'bg-gray-300 cursor-not-allowed'
+                }`}
               >
                 View Results
               </button>
@@ -154,21 +202,22 @@ export function UploadFlow() {
         )}
 
         {currentStep === 5 && (
-        <UploadConfirmation
-          reportId={reportId}
-          fileName={uploadedFile?.name || ''}
-          htmlReport={outputs[0] || ''}  // ← Pass htmlReport instead of outputs
-          onStartNew={() => {
-            setCurrentStep(1);
-            setSelectedProduct('');
-            setSelectedVendor('');
-            setUploadedFile(null);
-            setProcessingStatus('');
-            setReportId('');
-            setOutputs([]);
-          }}
-        />
-      )}
+          <UploadConfirmation
+            reportId={reportId}
+            fileName={uploadedFile?.name || ''}
+            htmlReport={htmlReport}
+            onStartNew={() => {
+              setCurrentStep(1);
+              setSelectedProduct('');
+              setSelectedVendor('');
+              setUploadedFile(null);
+              setProcessingStatus('');
+              setReportId('');
+              setHtmlReport('');
+              setError('');
+            }}
+          />
+        )}
       </div>
     </div>
   );
