@@ -12,9 +12,17 @@
     }
   ],
   "routes": [
-    { "src": "/upload-pdf/?", "dest": "/backend_api.py" },
-    { "src": "/health/?", "dest": "/backend_api.py" },
-    { "src": "/", "dest": "/backend_api.py" },
-    { "src": "/(.*)", "dest": "/frontend/$1" }
+    {
+      "src": "/upload-pdf/?",
+      "dest": "/backend_api.py"
+    },
+    {
+      "src": "/health/?",
+      "dest": "/backend_api.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
+    }
   ]
 }
