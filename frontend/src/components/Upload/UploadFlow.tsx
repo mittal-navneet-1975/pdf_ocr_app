@@ -35,39 +35,41 @@ export function UploadFlow() {
     }
   };
   const handleFileUpload = async (file: File) => {
-      setUploadedFile(file);
-      setOutputs([]);
-      setCurrentStep(4);
-  
-      setProcessingStatus('parsing');
-  
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-  
-        await new Promise((r) => setTimeout(r, 500));
-  
-        // Roll back to original backend endpoint
-        const res = await fetch('http://pdf-ocr-backend-one.vercel.app/upload-pdf/', {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await res.json();
-        const receivedOutputs: string[] = data.outputs || [];
-        setOutputs(receivedOutputs);
-  
-        setProcessingStatus('processing');
-        setTimeout(() => setProcessingStatus('rules'), 1200);
-        setTimeout(() => setProcessingStatus('report'), 2600);
-        setTimeout(() => {
-          setProcessingStatus('complete');
-          setReportId('RPT-' + Date.now());
-        }, 3800);
-      } catch (err) {
-        console.error('Upload error', err);
-        setProcessingStatus('error');
-      }
-    };
+    setUploadedFile(file);
+    setOutputs([]);
+    setCurrentStep(4);
+
+    setProcessingStatus('parsing');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Call backend
+      const res = await fetch('https://pdf-ocr-backend-one.vercel.app/upload-pdf/', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      
+      // Store the htmlReport from backend response
+      const htmlReport = data.htmlReport || null;
+      setOutputs([htmlReport]); // Store htmlReport in outputs
+
+      setProcessingStatus('processing');
+      setTimeout(() => setProcessingStatus('rules'), 1200);
+      setTimeout(() => setProcessingStatus('report'), 2600);
+      setTimeout(() => {
+        setProcessingStatus('complete');
+        setReportId('RPT-' + Date.now());
+      }, 3800);
+    } catch (err) {
+      console.error('Upload error', err);
+      setProcessingStatus('error');
+    }
+  };
   // ...existing code...
 
   return (
@@ -152,21 +154,21 @@ export function UploadFlow() {
         )}
 
         {currentStep === 5 && (
-          <UploadConfirmation
-            reportId={reportId}
-            fileName={uploadedFile?.name || ''}
-            outputs={outputs}
-            onStartNew={() => {
-              setCurrentStep(1);
-              setSelectedProduct('');
-              setSelectedVendor('');
-              setUploadedFile(null);
-              setProcessingStatus('');
-              setReportId('');
-              setOutputs([]);
-            }}
-          />
-        )}
+        <UploadConfirmation
+          reportId={reportId}
+          fileName={uploadedFile?.name || ''}
+          htmlReport={outputs[0] || ''}  // ← Pass htmlReport instead of outputs
+          onStartNew={() => {
+            setCurrentStep(1);
+            setSelectedProduct('');
+            setSelectedVendor('');
+            setUploadedFile(null);
+            setProcessingStatus('');
+            setReportId('');
+            setOutputs([]);
+          }}
+        />
+      )}
       </div>
     </div>
   );

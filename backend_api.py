@@ -13,6 +13,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://pdfocr-n7gwo6r0c-navneet-mittals-projects.vercel.app",
+        "https://pdfocrapp.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000"
     ],
